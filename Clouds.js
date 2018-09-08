@@ -1,11 +1,15 @@
 'use strict';
 
 let tests = require('./cloudTESTS.json');
-let inputString = tests['T1']
+let inputString = tests['T0']
 
 let currentLine = 0;
 main();
-function readLine() { return inputString[currentLine++]; }
+
+function readLine() {
+    return inputString[currentLine++];
+}
+
 function main() {
     const n = parseInt(readLine(), 10);
     const p = readLine().split(' ').map(pTemp => parseInt(pTemp, 10));
@@ -21,124 +25,127 @@ function main() {
 
 
 // Complete the maximumPeople function below.
-function maximumPeople(aPopulations, aTowns, aClouds, aRadii) {
-    const PROD = 0//true   // Production mode
+function maximumPeople(aPopulations, aTownAddrs, aCloudAddrs, aRadii) {
 
-    let towns = []
+    const TIMER_ON = (s) => console.time(s)
+    const TIMER_OFF = (s) => console.timeEnd(s)
+    const PROD = 0 //true   // Production mode
+
     let clouds = []
-    // PROD || console.error('aTowns', aTowns)
-    // PROD || console.error('aPops', aPopulations)
-    // PROD || console.error('aClouds',aClouds)
-    // PROD || console.error('aRadii', aRadii)
+    let towns = []
 
-
-    // 1) Create Towns
-    for (let x = 0; x < aTowns.length; x++) {
-        let town = {}
-        town.location = parseInt(aTowns[x], 10)
-        town.population = parseInt(aPopulations[x], 10)
-        town.isDark = false  //default
+    PROD || TIMER_ON('Loading up Towns')
+    //! CREATE TOWNS ARRAY then SORT
+    for (let x = 0; x < aPopulations.length; x++) {
+        let town = {
+            hasCloud: false
+        }
+        town.population = aPopulations[x]
+        town.address = aTownAddrs[x]
         towns.push(town)
     }
-    towns.sort((a, b) => b.location - a.location)
+    PROD || TIMER_OFF('Loading up Towns')
+
+    PROD || TIMER_ON('Sorting towns')
+    var townSort = (a, b) => {
+        const A = a.address;
+        const B = b.address;
+
+        let comp = 0;
+        if (A > B)
+            comp = 1;
+        else if (A < B)
+            comp = -1;
+        return comp;
+    }
+    towns.sort(townSort)
+    PROD || TIMER_OFF('Sorting towns')
+
+    //! Combine population for towns at same address
+    for (let x = 0; x < towns.length - 2; x++) {
+        next = x + 1
+        while (towns[x].address == towns[next].address || 0) {
+            towns[x].population += towns[next].population
+            towns.splice(next, 1)
+        }
+    }
     PROD || console.table(towns)
 
-    let firstTown = towns[towns.length - 1].location
-    let lastTown = towns[0].location
-    PROD || console.error(`firstlastTown: `, firstTown, lastTown)
+    //! Get town minmax
+    let firstTown = towns[0].address
+    let lastTown = towns[towns.length - 1].address
+    PROD || console.error(`firstTown: ${firstTown}, lastTown: ${lastTown}`)
 
-    //     var duplicates = towns.reduce(function (acc, el, i, arr) {
-    //         if (arr.indexOf(el) !== i && acc.indexOf(el) < 0) 
-    //             acc.push(el); return acc;
-    //     }, []);
 
-    //    console.log(duplicates);
+    //! BUILD CLOUDS
+    var townInRange = (town, cloud) => town.address >= cloud.min && town.address <= cloud.min
 
-    // 2) Build Clouds. Create list of clouds that cover any town
-    for (let y = 0; y < aClouds.length; y++) {
-        let cloud = {}
-        cloud.location = parseInt(aClouds[y], 10)
-        const rad = parseInt(aRadii[y], 10)
-        cloud.min = Math.max(cloud.location - rad, firstTown)
-        cloud.max = Math.min(cloud.location + rad, lastTown)
-        cloud.towns = []
-        //PROD || console.error('Cloud-->', cloud)
-        if (0 != coversTown(cloud)) {
-            PROD || console.log(cloud)
-            clouds.push(cloud)
-        }
-    }
-
-    PROD || console.error(`Remaining Towns[tot:(${towns.length})]-->\n`)  //modified towns
-    PROD || console.table(towns)  //modified towns
-    PROD || console.error('Clouds[]-->\n')
-    PROD || console.table(clouds)
-
-    // 3) Get maxPopInLight
-    let maxPop = 0
-
-    maxPop = Math.max(maxPop, getPopInLight())   //initial state
-    PROD || console.error('initial Pop:', maxPop)
-
-    // 4) Turn off each cloud and recalculate
-    clouds.forEach(function (c) {
-        setCloud('HIDE', c)
-        maxPop = Math.max(maxPop, getPopInLight())
-        //PROD || console.error('-- Pop:', maxPop)
-        setCloud('SHOW', c)
-    })
-
-    return maxPop;
-    //} // end main
-
-    //! ** Get number of people in Light towns
-    function getPopInLight() {
-        let totalInLight = 0
-
-        towns.forEach(function (t) {
-            //PROD || console.error("gPIL:", t)
-            if (t.isDark == false)
-                totalInLight += t.population
-        })
-
-        PROD || console.error("PopLight", totalInLight)
-        return totalInLight // totalInLight;
-    }
-
-    //! ** Does this cloud cover any town? Return0 if no
-    function coversTown(cloud) {
-        for (let z = towns.length - 1; z >= 0; z--) {
-            let town = towns[z]
-            if (town.location > cloud.max)
-                break;  // don't check towns beyond cloud edge
-
-            if (town.location >= cloud.min) {  // ...covered
-                //! TBD update other Cloud maybe:
-                if (!town.isDark) {
-                    town.isDark = true
-                    cloud.towns.push(town)
+    function findNextTownUnderCloud(cloud, ndx, addr) {
+        for (let x = ndx; x < towns.length; x++)
+            if (townInRange(towns[x], cloud)) {
+                if (town[x].hasCloud == true) { // >1 clouds = permanent darkness
+                    towns.splice(x, 1)
+                    x--
+                } else {
+                    town[x].hasCloud = true
+                    return (ndx + 1)
                 }
-                else
-                    towns.splice(z, 1)   //Delete it -a town with >1 cloud will never be light
+
+                return -1
+            }
+
+
+        PROD || console.time('Loading up Clouds')
+        PROD || console.log(`Processing clouds..... `)
+        for (let y = 0; y < aCloudAddrs.length; y++) {
+            let cloud = {
+                address: 0,
+                min: -1,
+                max: -1,
+                population: 0
+            }
+            const rad = parseFloat(aRadii[y], 10)
+            cloud.address = parseFloat(aCloudAddrs[y], 10)
+            cloud.min = Math.max(cloud.address - rad, firstTown)
+            cloud.max = Math.min(cloud.address + rad, lastTown)
+
+            PROD || console.error(cloud)
+
+            // FIND TOWNS IN RANGE
+            for (let cNdx = cloud.min; cNdx <= cloud.max; cNdx++) {
+                let ndx = 0
+
+                do {
+                    console.log('B')
+                    ndx = findNextTownUnderCloud(cloud, ndx, cNdx)
+                    console.log('C')
+                    if (ndx < 0)
+                        break
+                    console.log('D')
+                    cloud.population += towns[y].population;
+                }
+                while (1)
+                console.log('E')
+
+                if (cloud.population > 0)
+                    clouds.push(cloud)
+
             }
         }
-
-        return cloud.towns.length;
+        PROD || console.timeEnd('Loading up Clouds')
     }
 
+    //! FIND MAX IN LIGHT
+    let maxInLight = 0
+    let alwaysLight = 0
+    let coveredPop = 0
 
-    //! HIDE or SHOW a cloud
-    function setCloud(state, cloud) {
-        for (let z = 0; z < cloud.towns.length; z++)
-            switch (state) {
-                case "HIDE":
-                    cloud.towns[z].isDark = false
-                    break
+    //let  maxPop == pop of all towns
+    for (let z = 0; z < clouds.length; z++)
+        coveredPop += clouds[z].population
 
-                case "SHOW":
-                    cloud.towns[z].isDark = true
-                    break
-            }
-    }
-} // end fn main    
+    alwaysLight = maxPop - coveredPop;
 
+
+    return maxInLight
+} // end fn main

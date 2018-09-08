@@ -1,34 +1,29 @@
-class Student {
-    constructor(name, age) {
-        this.name = name;
-        this.age = age;
+const towns = [
+    { Location: "Mon", population: 33}, 
+    { Location: "Mon", population: 2}, 
+    { Location: "Tue", population: 60}, 
+    { Location: "Tue", population: 100}, 
+    { Location: "Wed", population: 30}
+];
+
+console.log(towns)
+for(x=0; x< towns.length-2; x++) {
+    next=x+1
+    while(towns[x].Location == towns[next].Location || 0){
+        towns[x].population += towns[next].population
+        towns.splice(next, 1)
     }
-    speak(text) {
-        return (`${text}${this.name}`);
-    };
 }
 
-var person = { name: "Jimmy", lastName: "Doe", age: 50, eyeColor: "blue" };
-let arr = []
+// var idx = towns
+//     .map(x => x.Location)
+//     .indexOf("Tue");
 
-var first = new Student('John', 26)
-first.fred=3
-
-arr[1]= first
-
-arr[2] = person
-arr[2].eyeColor = 'Burnished pamplemousse'
-arr[2].newThingy = 56
-
-person = { name: "steve", lastName: "smith", age: 3};
-
-arr[6] = { name: "steve", lastName: "smith", age: 3 };
-arr[8] = person;
-arr[8].newThingy = 88
-
-first = new Student('dav', 44 )
-arr[4]= first
-console.log(first.speak("Hello there "))
+// console.log(idx)
 
 
-console.table(arr)
+
+
+
+console.log(`###################################################>>`)
+console.log(towns);
